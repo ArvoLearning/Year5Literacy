@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comma Crossing – Session 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:ital,wght@0,400;0,500;0,700;0,800;0,900;1,700&family=Permanent+Marker&display=swap" rel="stylesheet">
+<style>
+:root {
+  --asphalt:   #2b2d31;
+  --asphalt-d: #1c1e21;
+  --road-line: #f4d03f;
+  --sign-yellow: #ffc928;
+  --sign-green:  #1e8e3e;
+  --sign-red:    #d8342b;
+  --sign-blue:   #1565c0;
+  --white:       #fdfdfb;
+  --ink:         #1a1a1a;
+  --orange:      #ff7a1a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Rubik', sans-serif;
+  background: var(--asphalt);
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* road texture: dashed center lines */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 40px,
+      rgba(244,208,63,.08) 40px 60px,
+      transparent 60px 100px
+    );
+}
+/* speckled asphalt noise */
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(circle, rgba(255,255,255,.025) 1px, transparent 1px);
+  background-size: 6px 6px;
+}
+
+#app {
+  position: relative; z-index: 1;
+  max-width: 1000px; margin: 0 auto;
+  padding: 28px 20px 80px;
+}
+
+/* ── HEADER: HIGHWAY SIGN ── */
+.highway-sign {
+  background: var(--sign-green);
+  border: 6px solid var(--white);
+  border-radius: 10px;
+  padding: 22px 28px;
+  margin-bottom: 22px;
+  box-shadow: 0 10px 0 rgba(0,0,0,.3), 0 14px 24px rgba(0,0,0,.4);
+  animation: dropSign .6s cubic-bezier(.34,1.56,.64,1) both;
+  position: relative;
+}
+@keyframes dropSign { from{opacity:0;transform:translateY(-40px) rotate(-2deg)} to{opacity:1;transform:none} }
+
+.highway-sign::before {
+  content: '';
+  position: absolute; top: -4px; left: 24px; right: 24px; height: 4px;
+  background: repeating-linear-gradient(90deg, var(--white) 0 14px, transparent 14px 24px);
+}
+
+.hs-row { display: flex; align-items: center; gap: 18px; }
+.hs-exit {
+  flex-shrink: 0; background: var(--white); color: var(--sign-green);
+  border-radius: 6px; padding: 8px 14px; text-align: center;
+  font-family: 'Anton', sans-serif;
+}
+.hs-exit .exit-num { font-size: 2.2rem; line-height: 1; }
+.hs-exit .exit-label { font-size: .55rem; letter-spacing: .15em; }
+.hs-text { flex: 1; }
+.hs-text .hs-eyebrow {
+  font-size: .68rem; letter-spacing: .18em; text-transform: uppercase;
+  color: #d4f5dc; margin-bottom: 4px; font-weight: 700;
+}
+.hs-text h1 {
+  font-family: 'Anton', sans-serif; font-size: clamp(1.6rem,4.5vw,2.6rem);
+  letter-spacing: .02em; color: var(--white); line-height: 1.05;
+  text-shadow: 2px 2px 0 rgba(0,0,0,.25);
+}
+.hs-text .hs-sub { font-size: .8rem; color: #d4f5dc; margin-top: 6px; font-weight: 600; }
+.hs-icon { flex-shrink: 0; font-size: 2.4rem; }
+
+/* ── NAV: ROAD SIGN BUTTONS ── */
+.sign-nav {
+  display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap;
+  animation: dropSign .7s .1s cubic-bezier(.34,1.56,.64,1) both;
+}
+.sign-btn {
+  flex: 1; min-width: 110px;
+  background: var(--sign-yellow); color: var(--ink);
+  border: 4px solid var(--ink); border-radius: 6px;
+  padding: 10px 8px; cursor: pointer; transition: all .2s;
+  font-family: 'Anton', sans-serif; font-size: .82rem; letter-spacing: .03em;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  position: relative;
+}
+.sign-btn .sb-icon { font-size: 1.3rem; }
+.sign-btn.active {
+  background: var(--sign-red); color: var(--white); border-color: var(--white);
+  transform: translateY(-3px);
+  box-shadow: 0 5px 0 rgba(0,0,0,.3);
+}
+.sign-btn:hover:not(.active) { transform: translateY(-2px); background: #ffd75e; }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--white); color: var(--ink);
+  border-radius: 12px; padding: 0; display: none;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  animation: panelIn .4s ease both; overflow: hidden;
+}
+.panel.active { display: block; }
+@keyframes panelIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+
+.panel-strip {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 24px; background: var(--asphalt-d); color: var(--white);
+}
+.ps-icon {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--sign-yellow); color: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; flex-shrink: 0; border: 3px solid var(--white);
+}
+.ps-text h2 { font-family: 'Anton', sans-serif; font-size: 1.25rem; letter-spacing: .02em; }
+.ps-text p { font-size: .76rem; color: #ccc; margin-top: 2px; }
+.ps-time { margin-left: auto; flex-shrink: 0; background: var(--sign-red); border-radius: 20px; padding: 4px 14px; font-size: .72rem; font-weight: 700; }
+
+.panel-content { padding: 26px; }
+
+/* ── STOP SIGN PAUSE DEMO ── */
+.pause-demo {
+  background: #fff8e0; border: 3px solid var(--ink); border-radius: 10px;
+  padding: 20px; margin-bottom: 18px;
+}
+.pause-demo .pd-label { font-family: 'Anton', sans-serif; font-size: 1.1rem; margin-bottom: 14px; color: var(--sign-red); letter-spacing: .02em; }
+.pause-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media(max-width:560px){ .pause-compare, .ex-grid { grid-template-columns: 1fr; } }
+.pause-card {
+  background: white; border: 3px solid var(--ink); border-radius: 8px;
+  padding: 16px; text-align: center; cursor: pointer; transition: all .2s;
+}
+.pause-card:hover { transform: translateY(-3px); }
+.pause-card .pc-sentence { font-family: 'Permanent Marker', cursive; font-size: 1.15rem; margin-bottom: 10px; line-height: 1.5; }
+.pause-card .pc-btn {
+  background: var(--sign-blue); color: white; border: none; border-radius: 20px;
+  padding: 6px 16px; font-weight: 700; font-size: .78rem; cursor: pointer;
+}
+.pause-result {
+  display: none; margin-top: 10px; font-size: .8rem; font-weight: 700;
+  background: #e8f5e9; border-radius: 6px; padding: 8px; color: #1e6b30;
+}
+.pause-result.show { display: block; animation: panelIn .3s ease; }
+
+/* ── LI / SC ── */
+.li-sign {
+  background: var(--sign-blue); color: white; border-radius: 10px;
+  padding: 16px 20px; margin-bottom: 16px; position: relative; border: 3px solid var(--ink);
+}
+.li-sign .li-tag { font-family: 'Anton', sans-serif; font-size: .95rem; letter-spacing: .08em; margin-bottom: 6px; color: #cfe4ff; }
+.li-sign p { font-size: .9rem; font-weight: 600; line-height: 1.6; }
+
+.sc-sign {
+  background: var(--sign-green); color: white; border-radius: 10px;
+  padding: 16px 20px; margin-bottom: 18px; border: 3px solid var(--ink);
+}
+.sc-sign .sc-tag { font-family: 'Anton', sans-serif; font-size: .95rem; letter-spacing: .08em; margin-bottom: 10px; color: #d4f5dc; }
+.sc-item-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; font-size: .87rem; font-weight: 600; line-height: 1.5; }
+.sc-check2 {
+  width: 22px; height: 22px; border: 2.5px solid white; border-radius: 50%;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .2s; font-size: .75rem; margin-top: 1px;
+}
+.sc-check2.done { background: var(--sign-yellow); color: var(--ink); border-color: var(--sign-yellow); }
+
+/* ── COMMA RULE BANNER ── */
+.rule-sign {
+  background: var(--sign-red); color: white; border: 3px solid var(--ink);
+  border-radius: 10px; padding: 14px 20px; margin-bottom: 18px;
+  font-weight: 700; font-size: .92rem; display: flex; align-items: center; gap: 12px;
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.rule-sign .rs-icon { font-size: 1.6rem; flex-shrink: 0; }
+
+/* ── EXAMPLE CARDS ── */
+.ex-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 18px; }
+.ex-card {
+  border: 3px solid var(--ink); border-radius: 10px; padding: 16px;
+  cursor: pointer; transition: all .2s;
+}
+.ex-card:hover { transform: translateY(-3px); box-shadow: 4px 4px 0 var(--ink); }
+.ex-card.prep { background: #fff3da; }
+.ex-card.adverbial { background: #ffe0d6; }
+.ex-card.clause { background: #d6f0ff; }
+.ex-card h4 { font-family: 'Anton', sans-serif; font-size: .95rem; letter-spacing: .02em; margin-bottom: 8px; }
+.ex-card .ec-sentence {
+  font-family: 'Permanent Marker', cursive; font-size: 1.05rem; line-height: 1.55;
+}
+.ex-card .ec-sentence .intro-part {
+  background: var(--sign-yellow); padding: 1px 4px; border-radius: 3px;
+}
+.ex-card .ec-sentence .comma-mark {
+  color: var(--sign-red); font-weight: 900; font-size: 1.3rem;
+}
+.ex-card .ec-note { font-size: .74rem; color: #667; margin-top: 8px; display: none; }
+.ex-card.revealed .ec-note { display: block; animation: panelIn .3s ease; }
+
+/* ── PAUSE BUTTON: read aloud sim ── */
+.pause-here-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--ink); color: var(--sign-yellow);
+  border-radius: 20px; padding: 2px 10px; font-size: .7rem; font-weight: 800;
+  margin: 0 4px; vertical-align: middle;
+}
+
+/* ── GUIDED PRACTICE: COMMA PLACEMENT ── */
+.gp-item {
+  border: 3px solid var(--ink); border-radius: 10px; padding: 18px 20px;
+  margin-bottom: 14px; position: relative; background: #fafafa;
+}
+.gp-item .gp-tag {
+  position: absolute; top: -13px; left: 16px;
+  background: var(--sign-blue); color: white;
+  font-family: 'Anton', sans-serif; font-size: .8rem; letter-spacing: .04em;
+  padding: 3px 12px; border-radius: 14px; border: 2px solid var(--ink);
+}
+.gp-sentence-build {
+  font-family: 'Permanent Marker', cursive; font-size: 1.15rem; line-height: 2;
+  margin: 10px 0 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 2px;
+}
+.word-token { display: inline-block; }
+.comma-slot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border: 2.5px dashed var(--sign-red);
+  border-radius: 50%; cursor: pointer; margin: 0 2px; transition: all .2s;
+  font-weight: 900; color: transparent; background: white;
+}
+.comma-slot:hover { background: #fff0e8; transform: scale(1.1); }
+.comma-slot.placed { border-style: solid; background: var(--sign-red); color: white; }
+.comma-slot.wrong-flash { animation: shake .3s ease; }
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+
+.gp-feedback2 {
+  display: none; font-size: .82rem; font-weight: 700; padding: 8px 14px;
+  border-radius: 6px; border: 2px solid var(--ink); margin-top: 6px;
+}
+.gp-feedback2.show { display: block; animation: panelIn .3s ease; }
+.gp-feedback2.good { background: #d6f5dc; color: #1a7a3a; }
+.gp-feedback2.bad { background: #ffe0e0; color: #b02020; }
+
+.gp-listen-btn {
+  background: var(--sign-blue); color: white; border: none; border-radius: 20px;
+  padding: 6px 16px; font-size: .78rem; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; margin-bottom: 10px;
+}
+
+/* progress road */
+.road-progress {
+  background: var(--asphalt); border-radius: 10px; padding: 14px 18px;
+  margin-bottom: 18px; display: flex; align-items: center; gap: 14px; color: white;
+}
+.road-progress .rp-label { font-family: 'Anton', sans-serif; font-size: .8rem; letter-spacing: .04em; white-space: nowrap; }
+.road-progress .rp-track {
+  flex: 1; height: 14px; background: #444; border-radius: 7px; overflow: hidden;
+  position: relative; border: 2px solid var(--road-line);
+}
+.road-progress .rp-fill { height: 100%; background: var(--sign-yellow); width: 0%; transition: width .5s ease; }
+.road-progress .rp-car { font-size: .9rem; }
+
+/* ── INDIVIDUAL TASK ── */
+.task-card {
+  background: white; border: 3px solid var(--ink); border-radius: 10px;
+  padding: 20px; margin-bottom: 16px;
+}
+.task-card h3 { font-family: 'Anton', sans-serif; font-size: 1.1rem; margin-bottom: 10px; color: var(--sign-blue); }
+.starter-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.starter-chip {
+  background: var(--sign-yellow); border: 2px solid var(--ink); border-radius: 16px;
+  padding: 5px 12px; font-size: .78rem; font-weight: 700; cursor: pointer; transition: all .15s;
+}
+.starter-chip:hover { background: var(--orange); color: white; }
+.starter-chip.dep { background: #ffd6c2; }
+.starter-chip.dep:hover { background: var(--sign-red); color: white; }
+
+/* ── WRAP-UP ── */
+.recap-strip {
+  background: var(--sign-green); color: white; border: 3px solid var(--ink);
+  border-radius: 10px; padding: 16px 20px; margin-bottom: 18px;
+  font-weight: 700; font-size: .9rem; box-shadow: 4px 4px 0 var(--ink);
+  display: flex; align-items: center; gap: 12px;
+}
+
+.hw-sign {
+  background: var(--sign-yellow); border: 3px solid var(--ink); border-radius: 10px;
+  padding: 20px; margin-bottom: 16px;
+}
+.hw-sign h3 { font-family: 'Anton', sans-serif; font-size: 1.1rem; margin-bottom: 12px; color: var(--ink); }
+.hw-step2 { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; font-size: .85rem; font-weight: 600; line-height: 1.5; }
+.hw-step2 .hs2-num {
+  width: 24px; height: 24px; background: var(--ink); color: var(--sign-yellow);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: 'Anton', sans-serif; font-size: .8rem; flex-shrink: 0;
+}
+
+.final-checklist {
+  background: #e8f5e9; border: 3px solid var(--ink); border-radius: 10px; padding: 20px; margin-bottom: 16px;
+}
+.final-checklist h3 { font-family: 'Anton', sans-serif; font-size: 1.05rem; margin-bottom: 12px; color: #1a7a3a; }
+.fc-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; margin-bottom: 9px; font-size: .85rem; font-weight: 600; line-height: 1.5; }
+.fc-box { width: 20px; height: 20px; border: 2px solid var(--ink); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: .7rem; transition: all .2s; margin-top: 1px; }
+.fc-box.ticked { background: var(--sign-green); border-color: var(--sign-green); color: white; }
+
+.finish-banner {
+  display: none; background: var(--asphalt); color: var(--white); border: 3px solid var(--sign-yellow);
+  border-radius: 10px; padding: 22px; text-align: center;
+}
+.finish-banner.show { display: block; animation: panelIn .4s ease; }
+.finish-banner h3 { font-family: 'Anton', sans-serif; font-size: 1.5rem; color: var(--sign-yellow); margin-bottom: 8px; letter-spacing: .03em; }
+.finish-banner p { font-size: .85rem; color: #ddd; line-height: 1.6; }
+
+/* ── WHITEBOARD ── */
+.wb {
+  background: white; border: 3px dashed var(--ink); border-radius: 10px;
+  padding: 14px; margin-top: 14px;
+}
+.wb label { font-family: 'Anton', sans-serif; font-size: .8rem; letter-spacing: .04em; color: var(--sign-blue); display: block; margin-bottom: 6px; }
+.wb textarea { width: 100%; border: none; resize: vertical; outline: none; font-family: 'Permanent Marker', cursive; font-size: .95rem; color: var(--ink); min-height: 75px; line-height: 1.9; }
+.wb textarea::placeholder { color: #bbb; font-family: 'Rubik', sans-serif; font-size: .82rem; }
+
+/* ── NAV FOOTER ── */
+.nav-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; }
+.nav-btn2 {
+  background: var(--sign-yellow); color: var(--ink); border: 3px solid var(--white);
+  border-radius: 8px; padding: 11px 24px; font-family: 'Anton', sans-serif;
+  font-size: 1rem; letter-spacing: .03em; cursor: pointer; transition: all .2s;
+  box-shadow: 0 5px 0 rgba(0,0,0,.3);
+}
+.nav-btn2:hover { transform: translateY(-2px); }
+.nav-btn2:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.3); }
+.nav-btn2:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+.nav-btn2.next { background: var(--sign-red); color: white; }
+.step-counter2 { font-family: 'Anton', sans-serif; font-size: .82rem; color: #aaa; letter-spacing: .06em; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ══════ HIGHWAY SIGN HEADER ══════ -->
+  <div class="highway-sign">
+    <div class="hs-row">
+      <div class="hs-exit">
+        <div class="exit-num">1</div>
+        <div class="exit-label">OF 8</div>
+      </div>
+      <div class="hs-text">
+        <div class="hs-eyebrow">🛑 Comma Crossing · Literacy Module</div>
+        <h1>Commas After Introductions</h1>
+        <div class="hs-sub">Year 5 · 50 minutes · Separating Introductory Phrases &amp; Clauses</div>
+      </div>
+      <div class="hs-icon">🚦</div>
+    </div>
+  </div>
+
+  <!-- ══════ NAV ══════ -->
+  <nav class="sign-nav">
+    <button class="sign-btn active" onclick="goTo(0)"><span class="sb-icon">🚦</span>HOOK</button>
+    <button class="sign-btn" onclick="goTo(1)"><span class="sb-icon">📍</span>THE RULE</button>
+    <button class="sign-btn" onclick="goTo(2)"><span class="sb-icon">🛣️</span>PRACTICE</button>
+    <button class="sign-btn" onclick="goTo(3)"><span class="sb-icon">✍️</span>YOUR TURN</button>
+    <button class="sign-btn" onclick="goTo(4)"><span class="sb-icon">🏁</span>WRAP-UP</button>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PANEL 0 · HOOK + LI/SC                        -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="panel active" id="p0">
+    <div class="panel-strip">
+      <div class="ps-icon">🚦</div>
+      <div class="ps-text">
+        <h2>WARM-UP — FEEL THE PAUSE</h2>
+        <p>Commas are road signs that tell your reader when to pause</p>
+      </div>
+      <span class="ps-time">⏱ 0–5 min</span>
+    </div>
+    <div class="panel-content">
+
+      <div class="pause-demo">
+        <div class="pd-label">🔊 LISTEN FOR THE PAUSE — Click Each Sentence</div>
+        <div class="pause-compare">
+          <div class="pause-card" onclick="showPause(this,'no')">
+            <div class="pc-sentence">"After school I went home."</div>
+            <button class="pc-btn">▶ Read it aloud in your head</button>
+            <div class="pause-result">😕 No pause — it runs together a bit fast. Harder to feel where "after school" ends.</div>
+          </div>
+          <div class="pause-card" onclick="showPause(this,'yes')">
+            <div class="pc-sentence">"After school, I went home."</div>
+            <button class="pc-btn">▶ Read it aloud in your head</button>
+            <div class="pause-result">😊 There's a natural <strong>pause</strong> at the comma! It separates the introduction from the main idea.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="li-sign">
+        <div class="li-tag">🎯 LEARNING INTENTION</div>
+        <p>I am learning to write <strong>commas to separate introductory phrases and clauses</strong> from the main part of a sentence.</p>
+      </div>
+
+      <div class="sc-sign">
+        <div class="sc-tag">✅ SUCCESS CRITERIA — I can…</div>
+        <div class="sc-item-row">
+          <div class="sc-check2" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'✓':''"> </div>
+          <span>Identify an <strong>introductory phrase or clause</strong> at the start of a sentence.</span>
+        </div>
+        <div class="sc-item-row">
+          <div class="sc-check2" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'✓':''"> </div>
+          <span>Correctly place a <strong>comma</strong> right after the introductory element.</span>
+        </div>
+        <div class="sc-item-row">
+          <div class="sc-check2" onclick="this.classList.toggle('done');this.textContent=this.classList.contains('done')?'✓':''"> </div>
+          <span>Write my own sentences using introductory phrases AND clauses with correct commas.</span>
+        </div>
+        <p style="font-size:.74rem;margin-top:6px;color:#e8f5e9;">💡 Tick each one as you build confidence — check back at the end!</p>
+      </div>
+
+      <div class="wb">
+        <label>📝 Quick Think</label>
+        <textarea placeholder="Read both sentences above out loud. Write one sentence describing how the comma changes the way it sounds…"></textarea>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PANEL 1 · THE RULE (DIRECT INSTRUCTION)       -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="panel" id="p1">
+    <div class="panel-strip">
+      <div class="ps-icon">📍</div>
+      <div class="ps-text">
+        <h2>THE RULE — COMMA AFTER THE INTRO</h2>
+        <p>Setting the scene before the main idea begins</p>
+      </div>
+      <span class="ps-time">⏱ 5–20 min</span>
+    </div>
+    <div class="panel-content">
+
+      <div style="background:#f0f4f8;border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+        <p style="font-size:.88rem;line-height:1.65;"><strong>Quick review:</strong> An <strong>independent clause</strong> has a subject + verb and can stand alone. "I went home." is independent — it's complete by itself.</p>
+        <p style="font-size:.88rem;line-height:1.65;margin-top:8px;">But sometimes we add a little <strong>"scene-setter"</strong> before it — a phrase or dependent clause that tells us when, where, why, or how. That scene-setter is the <strong>introductory element</strong>.</p>
+      </div>
+
+      <div class="rule-sign">
+        <span class="rs-icon">🛑</span>
+        <span>THE RULE: When a phrase or dependent clause comes at the <strong>beginning</strong> of a sentence (before the main idea), a <strong>comma</strong> usually follows it!</span>
+      </div>
+
+      <div style="font-family:'Anton',sans-serif;font-size:1.1rem;margin-bottom:12px;color:var(--sign-blue);letter-spacing:.02em;">🚏 THREE TYPES OF INTRODUCTIONS — Tap to Explore</div>
+
+      <div class="ex-grid">
+        <div class="ex-card prep" onclick="this.classList.toggle('revealed')">
+          <h4>📍 PREPOSITIONAL PHRASE</h4>
+          <div class="ec-sentence"><span class="intro-part">In the morning</span><span class="comma-mark">,</span> I ate breakfast.</div>
+          <div class="ec-note">Starts with a preposition (in, on, at, after, before, during…) + tells WHEN or WHERE.</div>
+        </div>
+        <div class="ex-card adverbial" onclick="this.classList.toggle('revealed')">
+          <h4>🐾 ADVERBIAL PHRASE</h4>
+          <div class="ec-sentence"><span class="intro-part">Walking slowly</span><span class="comma-mark">,</span> the dog sniffed the ground.</div>
+          <div class="ec-note">Starts with an -ing verb, describes HOW the action in the main clause happens.</div>
+        </div>
+        <div class="ex-card clause" onclick="this.classList.toggle('revealed')">
+          <h4>🧩 DEPENDENT CLAUSE</h4>
+          <div class="ec-sentence"><span class="intro-part">Because it was raining</span><span class="comma-mark">,</span> we stayed inside.</div>
+          <div class="ec-note">Has its own subject + verb but starts with a word like "because" — can't stand alone (remember complex sentences!).</div>
+        </div>
+      </div>
+
+      <div style="background:#fff8e0;border:3px solid var(--ink);border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+        <p style="font-size:.86rem;font-weight:700;line-height:1.6;">🎧 <strong>The Pause Test:</strong> Read the sentence aloud. If you naturally pause for a breath after the first chunk of words, that's where your comma goes!</p>
+      </div>
+
+      <div class="wb">
+        <label>📝 Spot the Type</label>
+        <textarea placeholder="Pick ONE of the three example sentences above and explain which type of introduction it uses and why…"></textarea>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PANEL 2 · GUIDED PRACTICE                     -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="panel" id="p2">
+    <div class="panel-strip">
+      <div class="ps-icon">🛣️</div>
+      <div class="ps-text">
+        <h2>PLACE THE COMMA — ROAD TRIP PRACTICE</h2>
+        <p>Click the spot where the pause belongs</p>
+      </div>
+      <span class="ps-time">⏱ 20–35 min</span>
+    </div>
+    <div class="panel-content">
+
+      <div class="road-progress">
+        <div class="rp-label">🚗 PROGRESS</div>
+        <div class="rp-track"><div class="rp-fill" id="practiceFill"></div></div>
+        <div class="rp-car" id="practiceCount">0 / 5</div>
+      </div>
+
+      <div id="gpPracticeContainer"></div>
+
+      <div class="wb">
+        <label>📝 Read Aloud Check</label>
+        <textarea placeholder="Pick your favourite sentence from above. Write it out and underline the introductory part…"></textarea>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PANEL 3 · INDIVIDUAL TASK                     -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="panel" id="p3">
+    <div class="panel-strip">
+      <div class="ps-icon">✍️</div>
+      <div class="ps-text">
+        <h2>YOUR TURN — BUILD TWO SENTENCES</h2>
+        <p>Use your own introductory phrase and clause</p>
+      </div>
+      <span class="ps-time">⏱ 35–45 min</span>
+    </div>
+    <div class="panel-content">
+
+      <div class="task-card">
+        <h3>🏷️ Sentence 1 — Start with an Introductory PHRASE</h3>
+        <p style="font-size:.85rem;color:#556;margin-bottom:10px;">Try one of these starter chips, or invent your own:</p>
+        <div class="starter-chips">
+          <div class="starter-chip" onclick="insertStarter(this,'phraseWb')">On the other hand,</div>
+          <div class="starter-chip" onclick="insertStarter(this,'phraseWb')">In my opinion,</div>
+          <div class="starter-chip" onclick="insertStarter(this,'phraseWb')">Walking down the street,</div>
+          <div class="starter-chip" onclick="insertStarter(this,'phraseWb')">After the bell rang,</div>
+          <div class="starter-chip" onclick="insertStarter(this,'phraseWb')">During the storm,</div>
+        </div>
+        <div class="wb" style="margin-top:0;">
+          <label>✍️ Write Your Phrase Sentence</label>
+          <textarea id="phraseWb" placeholder="On the other hand, I think we should go to the park instead."></textarea>
+        </div>
+      </div>
+
+      <div class="task-card">
+        <h3>🧩 Sentence 2 — Start with an Introductory DEPENDENT CLAUSE</h3>
+        <p style="font-size:.85rem;color:#556;margin-bottom:10px;">Try one of these starter chips, or invent your own:</p>
+        <div class="starter-chips">
+          <div class="starter-chip dep" onclick="insertStarter(this,'clauseWb')">Because I was tired,</div>
+          <div class="starter-chip dep" onclick="insertStarter(this,'clauseWb')">When the bell rang,</div>
+          <div class="starter-chip dep" onclick="insertStarter(this,'clauseWb')">Although it was cold,</div>
+          <div class="starter-chip dep" onclick="insertStarter(this,'clauseWb')">If I finish my homework,</div>
+          <div class="starter-chip dep" onclick="insertStarter(this,'clauseWb')">While we waited,</div>
+        </div>
+        <div class="wb" style="margin-top:0;">
+          <label>✍️ Write Your Clause Sentence</label>
+          <textarea id="clauseWb" placeholder="Because I was tired, I went to bed early."></textarea>
+        </div>
+      </div>
+
+      <div style="background:#e3f2fd;border:3px solid var(--ink);border-radius:10px;padding:16px 20px;">
+        <p style="font-size:.85rem;font-weight:700;line-height:1.6;">✅ <strong>Self-check:</strong> Does your sentence start with the introductory part, followed immediately by a comma, then the main idea? Read it aloud — can you feel the pause?</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- PANEL 4 · WRAP-UP                             -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="panel" id="p4">
+    <div class="panel-strip">
+      <div class="ps-icon">🏁</div>
+      <div class="ps-text">
+        <h2>WRAP-UP &amp; HOMEWORK</h2>
+        <p>Recap and your next mission</p>
+      </div>
+      <span class="ps-time">⏱ 45–50 min</span>
+    </div>
+    <div class="panel-content">
+
+      <div class="recap-strip">
+        <span style="font-size:1.4rem;">🚦</span>
+        <span>Introductory commas are like road signs — they guide your reader through the sentence and tell them exactly where to pause!</span>
+      </div>
+
+      <div class="ex-grid" style="margin-bottom:18px;">
+        <div class="ex-card prep">
+          <h4>📍 PHRASE</h4>
+          <div class="ec-sentence" style="font-size:.92rem;"><span class="intro-part">In the morning</span><span class="comma-mark">,</span> I ate breakfast.</div>
+        </div>
+        <div class="ex-card adverbial">
+          <h4>🐾 -ING PHRASE</h4>
+          <div class="ec-sentence" style="font-size:.92rem;"><span class="intro-part">Walking slowly</span><span class="comma-mark">,</span> the dog sniffed.</div>
+        </div>
+        <div class="ex-card clause">
+          <h4>🧩 CLAUSE</h4>
+          <div class="ec-sentence" style="font-size:.92rem;"><span class="intro-part">Because it rained</span><span class="comma-mark">,</span> we stayed in.</div>
+        </div>
+      </div>
+
+      <div class="hw-sign">
+        <h3>📚 HOMEWORK MISSION</h3>
+        <div class="hw-step2"><div class="hs2-num">1</div><span>Find a narrative or descriptive paragraph you've already written.</span></div>
+        <div class="hw-step2"><div class="hs2-num">2</div><span>Read through it and look for sentences that <strong>begin with an introductory phrase or clause</strong>.</span></div>
+        <div class="hw-step2"><div class="hs2-num">3</div><span>Check: did you place a <strong>comma</strong> right after the introductory part?</span></div>
+        <div class="hw-step2"><div class="hs2-num">4</div><span>Add or fix any missing commas you find!</span></div>
+      </div>
+
+      <div class="final-checklist">
+        <h3>✅ SESSION CHECKLIST — How did you go?</h3>
+        <div class="fc-row" onclick="tickFc(this)"><div class="fc-box">✓</div><span>I can identify an introductory phrase or clause at the start of a sentence.</span></div>
+        <div class="fc-row" onclick="tickFc(this)"><div class="fc-box">✓</div><span>I know the three types: prepositional phrase, adverbial (-ing) phrase, and dependent clause.</span></div>
+        <div class="fc-row" onclick="tickFc(this)"><div class="fc-box">✓</div><span>I can use the "pause test" to find where the comma goes.</span></div>
+        <div class="fc-row" onclick="tickFc(this)"><div class="fc-box">✓</div><span>I correctly placed commas in the practice sentences.</span></div>
+        <div class="fc-row" onclick="tickFc(this)"><div class="fc-box">✓</div><span>I wrote my own sentences using an introductory phrase and clause with correct commas.</span></div>
+      </div>
+
+      <div class="finish-banner" id="finishBanner">
+        <h3>🚦 ROAD SIGN MASTERED!</h3>
+        <p>Session 1 of 8 complete! You now know how to guide your reader with introductory commas — a sign of sophisticated writing. See you at the next stop!</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- NAV FOOTER -->
+  <div class="nav-foot">
+    <button class="nav-btn2" id="prevBtn" onclick="navigate(-1)" disabled>← BACK</button>
+    <span class="step-counter2" id="stepCounter">STOP 1 OF 5</span>
+    <button class="nav-btn2 next" id="nextBtn" onclick="navigate(1)">NEXT →</button>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+/* ── NAV ── */
+let cur = 0;
+const N = 5;
+
+function goTo(n) {
+  document.querySelectorAll('.panel').forEach((p,i) => {
+    p.classList.toggle('active', i===n);
+    if (i===n) { p.style.animation='none'; void p.offsetWidth; p.style.animation=''; }
+  });
+  document.querySelectorAll('.sign-btn').forEach((b,i) => b.classList.toggle('active', i===n));
+  cur = n;
+  document.getElementById('prevBtn').disabled = n===0;
+  document.getElementById('nextBtn').disabled = n===N-1;
+  document.getElementById('stepCounter').textContent = `STOP ${n+1} OF ${N}`;
+  window.scrollTo({top:0, behavior:'smooth'});
+  if (n===2) initPractice();
+}
+function navigate(d) { goTo(Math.max(0, Math.min(N-1, cur+d))); }
+
+/* ── HOOK PAUSE DEMO ── */
+function showPause(card) {
+  card.querySelector('.pause-result').classList.add('show');
+}
+
+/* ── GUIDED PRACTICE: comma placement ── */
+const practiceSentences = [
+  { before: 'After the long movie', after: 'we bought ice cream.', type: 'Prepositional Phrase' },
+  { before: 'Running as fast as possible', after: 'she caught the bus.', type: 'Adverbial Phrase' },
+  { before: 'When the alarm rang', after: 'everyone jumped out of bed.', type: 'Dependent Clause' },
+  { before: 'Covered in mud', after: 'the puppy trotted inside.', type: 'Adverbial Phrase' },
+  { before: 'Before the game started', after: 'the players warmed up.', type: 'Dependent Clause' }
+];
+let practiceCorrect = 0;
+
+function initPractice() {
+  const container = document.getElementById('gpPracticeContainer');
+  if (container.children.length) return;
+  practiceSentences.forEach((s, idx) => {
+    const div = document.createElement('div');
+    div.className = 'gp-item';
+    div.innerHTML = `
+      <div class="gp-tag">SENTENCE #${idx+1} — ${s.type}</div>
+      <button class="gp-listen-btn" onclick="this.nextElementSibling.style.opacity=1">🔊 Read it aloud, then click where the pause is</button>
+      <div class="gp-sentence-build" style="opacity:.5;transition:opacity .3s;">
+        <span class="word-token">${s.before}</span><span class="comma-slot" id="slot${idx}" onclick="placeComma(${idx})"></span><span class="word-token">${s.after}</span>
+      </div>
+      <div class="gp-feedback2" id="gpfb${idx}"></div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+function placeComma(idx) {
+  const slot = document.getElementById('slot' + idx);
+  if (slot.classList.contains('placed')) return;
+  slot.classList.add('placed');
+  slot.textContent = ',';
+  const fb = document.getElementById('gpfb' + idx);
+  const s = practiceSentences[idx];
+  fb.textContent = `✅ Correct! "${s.before}," ${s.after} — The comma separates the ${s.type.toLowerCase()} from the main idea.`;
+  fb.className = 'gp-feedback2 show good';
+  practiceCorrect++;
+  updatePracticeProgress();
+}
+
+function updatePracticeProgress() {
+  const pct = Math.round((practiceCorrect / practiceSentences.length) * 100);
+  document.getElementById('practiceFill').style.width = pct + '%';
+  document.getElementById('practiceCount').textContent = `${practiceCorrect} / ${practiceSentences.length}`;
+}
+
+/* ── STARTER CHIPS ── */
+function insertStarter(chip, wbId) {
+  const wb = document.getElementById(wbId);
+  const starter = chip.textContent + ' ';
+  if (!wb.value.startsWith(starter)) {
+    wb.value = starter + wb.value.replace(/^.*?,\s*/, '');
+  }
+  wb.focus();
+  // place cursor at end
+  wb.selectionStart = wb.selectionEnd = wb.value.length;
+}
+
+/* ── FINAL CHECKLIST ── */
+function tickFc(row) {
+  const box = row.querySelector('.fc-box');
+  box.classList.toggle('ticked');
+  const ticked = document.querySelectorAll('#p4 .fc-box.ticked').length;
+  if (ticked >= 4) document.getElementById('finishBanner').classList.add('show');
+}
+</script>
+</body>
+</html>
